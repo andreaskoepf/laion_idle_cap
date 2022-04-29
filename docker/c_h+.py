@@ -237,10 +237,10 @@ def c_h(n_gpu):
 	        # print(i)
 	        # print(d)
 	        start=time.time()
-	        raw_image = Image.open(io.BytesIO(d['jpg']))
+	        raw_image = Image.open(io.BytesIO(d['jpg'])).convert('RGB')
 	        #raw_image.save("./c_h/Test"+str(i)+".jpg")
 
-	        winner_cap, all_captions, all_sims =make_caption(raw_image) 	
+	        winner_cap, all_captions, all_sims = make_caption(raw_image) 	
 
 	        captioning_result={}
 	        captioning_result ["winner_cap"]= winner_cap
