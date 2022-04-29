@@ -9,7 +9,7 @@ run_args=(
     --rm                        # automatically remove the container when it exits
     --net=host                  # use host network
     --name=laion_cah            # name of container
-    #-v $SCRIPT_DIR/..:/mnt/src # mount source directory
+    -v $SCRIPT_DIR:/mnt/src     # mount source directory
 
     # To restrict GPU availability inside the docker container (e.g. to hide your display GPU) you can use:
     # --gpus '"device=1,2,3"'
