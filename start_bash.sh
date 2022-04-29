@@ -1,5 +1,6 @@
 #!/bin/bash
 containerId=laion_idle_cah:v0
+SCRIPT_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
 
 # define array for docker run call, allows to comment individual arguments
 run_args=(
@@ -8,6 +9,7 @@ run_args=(
     --rm                        # automatically remove the container when it exits
     --net=host                  # use host network
     --name=laion_cah            # name of container
+    #-v $SCRIPT_DIR/..:/mnt/src # mount source directory
 
     # To restrict GPU availability inside the docker container (e.g. to hide your display GPU) you can use:
     # --gpus '"device=1,2,3"'

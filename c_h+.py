@@ -218,7 +218,8 @@ def c_h(n_gpu):
 	import time
 	while client.jobCount() > 0 and not client.shouldDie():
 	    client.newJob()
-	    url ="pipe:aws s3 cp s3://laion-humans/humans_shards/"+ str(client.tar_url).split("/")[-1] + " -"   #client.tar_url
+	    print(str(client.tar_url))
+	    url ="pipe:aws s3 cp "+ str(client.tar_url) + " -"  # str(client.tar_url).split("/")[-1] + " -"   #client.tar_url
 	    print(url)
 	    upload_address = client.upload_address
 	    print(upload_address)
@@ -247,7 +248,7 @@ def c_h(n_gpu):
 	        captioning_result ["all_similarties"]= all_sims
 
 	        captioning_results[str(i)] = captioning_result
-	        print( captioning_results )
+	        #print( captioning_results )
 	        print(winner_cap)
 
 	        print( time.time()-start )

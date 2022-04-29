@@ -29,4 +29,4 @@ RUN python3 -m pip --no-cache-dir install webdataset simplet5 awscli
 COPY *.py ./
 
 # load models into torch hub cache
-RUN python3 prefetch_models.py 
+RUN python3 prefetch_models.py && rm prefetch_models.py

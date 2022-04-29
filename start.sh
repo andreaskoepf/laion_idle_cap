@@ -1,13 +1,14 @@
 #!/bin/bash
-containerId=laion_idle_cah:v0
+imageId=laion_idle_cah:v0
+containerName=laion_cah
 
 # define array for docker run call, allows to comment individual arguments
 run_args=(
     run
-    -it                         # interactive, allocate a pseudo-TTY
+    -itd                        # interactive, allocate a pseudo-TTY, detach
     --rm                        # automatically remove the container when it exits
     --net=host                  # use host network
-    --name=laion_cah            # name of container
+    --name=$containerName       # name of container
 
     # To restrict GPU availability inside the docker container (e.g. to hide your display GPU) you can use:
     # --gpus '"device=1,2,3"'
@@ -16,8 +17,11 @@ run_args=(
 
     -w /mnt/spirit/c_h          # set working directory
     --runtime nvidia            # use nvidia runtime
-    $containerId
+    $imageId
     python3 c_h+.py             # command to execute
 )
 
+echo "Starting docker container detached in background mode..."
+echo "Use 'docker attach $containerName' or './attach.sh' to attach to the process output."
+echo "Container ID:"
 docker ${run_args[@]}
