@@ -235,11 +235,11 @@ def c_h(n_gpu):
             #print( captioning_results )
             print(winner_cap)
 
-            print(time.time()-start)
+            print('Duration: ', time.time()-start)
             # break
 
         with open('./c_h/captioning_result_'+url.split("/")[-1].split(".")[0]+'.json', 'w') as fp:
-            json.dump(captioning_result, fp)
+            json.dump(captioning_results, fp)
 
         for abc in range(100):
             resp = upload('./c_h/captioning_result_' +

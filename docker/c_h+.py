@@ -259,7 +259,7 @@ def c_h(n_gpu):
 	        #break
 
 	    with open('./c_h/captioning_result_'+url.split("/")[-1].split(".")[0]+'.json', 'w') as fp:
-	        json.dump(captioning_result, fp)
+	        json.dump(captioning_results, fp)
 	  
 
 	    for abc in range(100):
