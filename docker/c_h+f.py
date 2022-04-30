@@ -10,17 +10,6 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 
-import torch
-import torch.nn.functional as F
-from torchvision import transforms
-from torchvision.transforms.functional import InterpolationMode
-
-import webdataset as wds
-import clip
-from simplet5 import SimpleT5
-import crawlingathome as cah
-from sampling import clip_rank, load_blip_decoder, sample, blip_rank, load_blip_ranking_model
-
 
 def c_h(n_gpu):
 
@@ -44,6 +33,17 @@ def c_h(n_gpu):
 	os.system("unzip simplet5-epoch-2-train-loss-0.2212-val-loss-0.2188.zip")
 
 	'''
+
+    import torch
+    import torch.nn.functional as F
+    from torchvision import transforms
+    from torchvision.transforms.functional import InterpolationMode
+
+    import webdataset as wds
+    import clip
+    from simplet5 import SimpleT5
+    import crawlingathome as cah
+    from sampling import clip_rank, load_blip_decoder, sample, blip_rank, load_blip_ranking_model
 
     client = cah.init(
         url="http://cah.io.community/",
@@ -259,7 +259,7 @@ def c_h(n_gpu):
 
 
 def main():
-    mp.set_start_method('spawn')
+    #mp.set_start_method('spawn')
 
     #n_gpus = 8
     visible_gpus = [0, 1, 2, 3, 4, 5, 6, 7]
