@@ -215,9 +215,10 @@ def c_h(n_gpu):
         # dataset = wds.WebDataset("dataset.tar.gz")
         dataset = wds.WebDataset(url)
         captioning_results = {}
+        start2 = time.time()
         for i, d in enumerate(dataset):
-            # print(i)
-            # print(d)
+            print(i)
+            #print(d)
             start = time.time()
             try:
                 raw_image = Image.open(io.BytesIO(d['jpg'])).convert('RGB')
@@ -227,31 +228,37 @@ def c_h(n_gpu):
                 continue
 
             captioning_result = {}
-            captioning_result["winner_cap"] = winner_cap
-            captioning_result["all_captions"] = all_captions
-            captioning_result["all_similarties"] = all_sims
+            captioning_result ["metadata_"+str(i)]= d['json'].decode('utf8', 'ignore') 
+            captioning_result ["winner_cap_"+str(i)]= winner_cap
+            captioning_result ["all_captions_"+str(i)]= all_captions
+            captioning_result ["all_similarties_"+str(i)]= all_sims
+
 
             captioning_results[str(i)] = captioning_result
-            #print( captioning_results )
+            #print((captioning_result))
+            #print( d['json']  )
             print(winner_cap)
 
             print('Duration: ', time.time()-start)
-            # break
+            print('Duration: ', time.time()-start2)
 
-        with open('./c_h/captioning_result_'+url.split("/")[-1].split(".")[0]+'.json', 'w') as fp:
-            json.dump(captioning_results, fp)
+            if i%500==0:
+            
+            
+               with open('./c_h/captioning_result_'+url.split("/")[-1].split(".")[0]+'.json', 'w') as fp:
+                  json.dump(captioning_results, fp)
 
-        for abc in range(100):
-            resp = upload('./c_h/captioning_result_' +
+               for abc in range(100):
+                  resp = upload('./c_h/captioning_result_' +
                           url.split("/")[-1].split(".")[0]+'.json')
-            if resp == 5888:
-                print('error while uploading')
-            elif resp == 0:
-                print('upload successful')
-                break
-            else:
-                print('unknown upload error')
-            time.sleep(5)
+                  if resp == 5888:
+                     print('error while uploading')
+                  elif resp == 0:
+                     print('upload successful')
+                     break
+                  else:
+                     print('unknown upload error')
+                     time.sleep(5)
 
         client.completeJob()  # - server is live so avoid actually calling this ;)
 
@@ -281,3 +288,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

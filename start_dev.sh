@@ -17,16 +17,16 @@ run_args=(
     --gpus all                  # specify which GPUs to use
 
     # mount external source file
-    --mount type=bind,source="$SCRIPT_DIR/docker/c_h+f.py",target="/mnt/spirit/c_h/c_h+f.py"
+    --mount type=bind,source="$SCRIPT_DIR/docker/c_h2.py",target="/mnt/spirit/c_h/c_h2.py"
 
     -w /mnt/spirit/c_h          # set working directory
     --runtime nvidia            # use nvidia runtime
     $imageId
-    python3 c_h+f.py             # command to execute
+    python3 c_h2.py             # command to execute
 )
 
 echo "Starting docker container attached in dev mode..."
-echo "File $SCRIPT_DIR/docker/c_h+f.py (outside container) is mapped to /mnt/spirit/c_h/c_h+f.py (inside container)"
+echo "File $SCRIPT_DIR/docker/c_h2.py (outside container) is mapped to /mnt/spirit/c_h/c_h2.py (inside container)"
 echo "CTRL-c to kill the script running in the docker container."
 echo "CTRL-p CTRL-q (key sequence) to detach (process continues detached in background)."
 docker ${run_args[@]}
