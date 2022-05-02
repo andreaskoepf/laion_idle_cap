@@ -18,7 +18,7 @@ run_args=(
     -w /mnt/spirit/c_h          # set working directory
     --runtime nvidia            # use nvidia runtime
     $imageId
-    python3 c_h2.py             # command to execute
+    python3 c_h2.py "$@"        # command to execute
 )
 
 echo "Starting docker container detached in background mode..."

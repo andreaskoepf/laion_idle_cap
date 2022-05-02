@@ -304,10 +304,10 @@ def main():
         parts = args.gpus.split(',')
         for p in parts:
             if '-' in p:
-                lo, hi = p.slipt('-')
+                lo, hi = p.split('-')
                 lo, hi = int(lo), int(hi)
                 assert hi >= lo
-                visible_gpus.extend(list(range(lo, hi)))
+                visible_gpus.extend(list(range(lo, hi+1)))
             else:
                 visible_gpus.append(int(p))
 
