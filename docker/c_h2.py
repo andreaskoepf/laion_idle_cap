@@ -349,8 +349,9 @@ def main():
     except KeyboardInterrupt:
         print("Caught KeyboardInterrupt, terminating workers")
         for job_id, (job, device_id) in jobs.items():
-            print(f'stopping: {job_id}')
             job.terminate()
+        for job_id, (job, device_id) in jobs.items():
+            print(f'[{job_id}] waiting for exit...')
             job.join()
         print('done.')
 
