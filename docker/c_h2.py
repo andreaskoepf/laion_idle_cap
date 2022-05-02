@@ -236,21 +236,21 @@ def c_h(n_gpu, job_id):
             with open('./c_h/captioning_result_'+url.split("/")[-1].split(".")[0]+'.json', 'w') as fp:
                 json.dump(captioning_results, fp)
 
-            for abc in range(100):
+            for retry in range(100):
                 resp = upload('./c_h/captioning_result_' +
                               url.split("/")[-1].split(".")[0]+'.json')
                 if resp == 5888:
-                    print('error while uploading')
+                    print(f'[{job_id}] error while uploading')
                 elif resp == 0:
-                    print('upload successful')
+                    print(f'[{job_id}] upload successful')
                     break
                 else:
-                    print('unknown upload error')
+                    print(f'[{job_id}] unknown upload error: {resp}')
                     time.sleep(5)
 
         start2 = time.time()
         for i, d in enumerate(dataset):
-            print(i)
+            # print(i)
             # print(d)
             start = time.time()
             try:
@@ -261,7 +261,7 @@ def c_h(n_gpu, job_id):
                 continue
 
             captioning_result = {}
-            captioning_result["metadata_" +
+            captioning_result['metadata_' +
                               str(i)] = d['json'].decode('utf8', 'ignore')
             captioning_result["winner_cap_"+str(i)] = winner_cap
             captioning_result["all_captions_"+str(i)] = all_captions
@@ -271,7 +271,7 @@ def c_h(n_gpu, job_id):
 
             # print(d['json'])
             print(
-                f"[{job_id}; total: {time.time()-start2:.2f}s; {time.time()-start:.2f}s] {winner_cap}")
+                f"[{job_id}:{i:05d}; total: {time.time()-start2:.2f}s; {time.time()-start:.2f}s] {winner_cap}")
 
             if i > 0 and i % 500 == 0:
                 upload_resutls()
