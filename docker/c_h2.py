@@ -331,7 +331,7 @@ def main():
             else:
                 print(f'[GPU{device_id:02d}] Worker died, respawning...')
                 p = mp.Process(target=c_h, kwargs=dict(n_gpu=device_id))
-                job[id] = p
+                jobs[id] = p
                 p.start()
 
 
