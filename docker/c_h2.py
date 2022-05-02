@@ -8,12 +8,14 @@ import json
 import numpy as np
 import time
 import argparse
+import signal
 
 from PIL import Image
 import torch
 
 
 def c_h(n_gpu):
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     os.environ['CUDA_VISIBLE_DEVICES'] = str(n_gpu)
 
@@ -323,17 +325,24 @@ def main():
         jobs[device_id] = p
         p.start()
 
-    while True:
-        time.sleep(1)
-        for device_id,job in jobs.items():
-            if job.is_alive():
-                pass
-            else:
-                print(f'[GPU{device_id:02d}] Worker died, respawning...')
-                p = mp.Process(target=c_h, kwargs=dict(n_gpu=device_id))
-                jobs[id] = p
-                p.start()
+    try:
+        while True:
+            time.sleep(1)
+            for device_id, job in jobs.items():
+                if job.is_alive():
+                    pass
+                else:
+                    print(f'[GPU{device_id:02d}] Worker died, respawning...')
+                    p = mp.Process(target=c_h, kwargs=dict(n_gpu=device_id))
+                    jobs[id] = p
+                    p.start()
 
+    except KeyboardInterrupt:
+        print("Caught KeyboardInterrupt, terminating workers")
+        for device_id, job in jobs.items():
+            print(f'stopping: {device_id}')
+            job.terminate()
+            job.join()            
 
 if __name__ == '__main__':
     main()
