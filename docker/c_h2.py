@@ -14,7 +14,7 @@ from PIL import Image
 import torch
 
 
-def c_h(n_gpu):
+def c_h(n_gpu, job_id):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     os.environ['CUDA_VISIBLE_DEVICES'] = str(n_gpu)
@@ -231,6 +231,23 @@ def c_h(n_gpu):
             "tmp" + str(client.tar_url).split("/")[-1].split(".")[0] + "_"+str(n_gpu)+".tar")
         print("dataset loaded")
         captioning_results = {}
+
+        def upload_resutls():
+            with open('./c_h/captioning_result_'+url.split("/")[-1].split(".")[0]+'.json', 'w') as fp:
+                json.dump(captioning_results, fp)
+
+            for abc in range(100):
+                resp = upload('./c_h/captioning_result_' +
+                              url.split("/")[-1].split(".")[0]+'.json')
+                if resp == 5888:
+                    print('error while uploading')
+                elif resp == 0:
+                    print('upload successful')
+                    break
+                else:
+                    print('unknown upload error')
+                    time.sleep(5)
+
         start2 = time.time()
         for i, d in enumerate(dataset):
             print(i)
@@ -252,29 +269,14 @@ def c_h(n_gpu):
 
             captioning_results[str(i)] = captioning_result
 
-            #print( d['json']  )
-            print(f"[GPU{n_gpu:02d}] {winner_cap}")
+            # print(d['json'])
+            print(
+                f"[{job_id}; total: {time.time()-start2:.2f}s; {time.time()-start:.2f}s] {winner_cap}")
 
-            print(f'Duration: {time.time()-start:.2f}s')
-            print(f'Total duration: {time.time()-start2:.2f}s')
+            if i > 0 and i % 500 == 0:
+                upload_resutls()
 
-            if i > 0 and (i % 500 == 0 or i >= 9990):
-
-                with open('./c_h/captioning_result_'+url.split("/")[-1].split(".")[0]+'.json', 'w') as fp:
-                    json.dump(captioning_results, fp)
-
-                for abc in range(100):
-                    resp = upload('./c_h/captioning_result_' +
-                                  url.split("/")[-1].split(".")[0]+'.json')
-                    if resp == 5888:
-                        print('error while uploading')
-                    elif resp == 0:
-                        print('upload successful')
-                        break
-                    else:
-                        print('unknown upload error')
-                        time.sleep(5)
-
+        upload_resutls()  # final upload
         client.completeJob()  # - server is live so avoid actually calling this ;)
         try:
             os.remove("tmp" + str(client.tar_url).split("/")
@@ -290,6 +292,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpus', default=None, type=str,
                         help='Comma separated list of gpus to use')
+    parser.add_argument('--workers', default=1, type=int,
+                        help='Number of workers spawned per GPU (default 1)')
     args = parser.parse_args()
     return args
 
@@ -299,6 +303,7 @@ def main():
     args = parse_args()
 
     num_gpus = torch.cuda.device_count()
+    num_workers = args.workers
     if args.gpus is None:
         visible_gpus = list(range(num_gpus))
     else:
@@ -320,29 +325,35 @@ def main():
 
     jobs = {}
     for device_id in visible_gpus:
-        print(f'[GPU{device_id:02d}] Launching worker-process...')
-        p = mp.Process(target=c_h, kwargs=dict(n_gpu=device_id))
-        jobs[device_id] = p
-        p.start()
+        for i in range(num_workers):
+            job_id = f'GPU{device_id:02d}.{i}'
+            print(f'[{job_id}] Launching worker-process...')
+            p = mp.Process(target=c_h, kwargs=dict(
+                n_gpu=device_id, job_id=job_id))
+            jobs[job_id] = (p, device_id)
+            p.start()
 
     try:
         while True:
             time.sleep(1)
-            for device_id, job in jobs.items():
+            for job_id, (job, device_id) in jobs.items():
                 if job.is_alive():
                     pass
                 else:
-                    print(f'[GPU{device_id:02d}] Worker died, respawning...')
-                    p = mp.Process(target=c_h, kwargs=dict(n_gpu=device_id))
-                    jobs[id] = p
+                    print(f'[{job_id}] Worker died, respawning...')
+                    p = mp.Process(target=c_h, kwargs=dict(
+                        n_gpu=device_id, job_id=job_id))
+                    jobs[job_id] = (p, device_id)
                     p.start()
 
     except KeyboardInterrupt:
         print("Caught KeyboardInterrupt, terminating workers")
-        for device_id, job in jobs.items():
-            print(f'stopping: {device_id}')
+        for job_id, (job, device_id) in jobs.items():
+            print(f'stopping: {job_id}')
             job.terminate()
-            job.join()            
+            job.join()
+        print('done.')
+
 
 if __name__ == '__main__':
     main()
