@@ -6,9 +6,11 @@ import time
 import multiprocessing as mp
 import json
 import numpy as np
+import time
+import argparse
 
 from PIL import Image
-import matplotlib.pyplot as plt
+import torch
 
 
 def c_h(n_gpu):
@@ -25,13 +27,10 @@ def c_h(n_gpu):
 	os.system("pip install --upgrade simplet5")
 	os.system("pip install clip-anytorch")
 
-
-
 	os.system("pip install --upgrade --force-reinstall torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113")
 
 	os.system("wget --no-check-certificate https://captions.christoph-schuhmann.de/spirit/simplet5-epoch-2-train-loss-0.2212-val-loss-0.2188.zip")
 	os.system("unzip simplet5-epoch-2-train-loss-0.2212-val-loss-0.2188.zip")
-
 	'''
 
     import torch
@@ -202,6 +201,19 @@ def c_h(n_gpu):
         # str(client.tar_url).split("/")[-1] + " -"   #client.tar_url
         url = "pipe:aws s3 cp " + str(client.tar_url) + " -"
         print(url)
+        print("aws s3 cp " + str(client.tar_url) + " tmp" +
+              str(client.tar_url).split("/")[-1].split(".")[0] + "_"+str(n_gpu)+".tar")
+        try:
+            os.system("aws s3 cp " + str(client.tar_url) + " tmp" +
+                      str(client.tar_url).split("/")[-1].split(".")[0] + "_"+str(n_gpu)+".tar")
+        except:
+            time.sleep(5)
+            try:
+                os.system("aws s3 cp " + str(client.tar_url) + " tmp" +
+                          str(client.tar_url).split("/")[-1].split(".")[0] + "_"+str(n_gpu)+".tar")
+            except:
+                continue
+
         upload_address = client.upload_address
         print(upload_address)
         client.log("Processing...")
@@ -213,12 +225,14 @@ def c_h(n_gpu):
             pass
 
         # dataset = wds.WebDataset("dataset.tar.gz")
-        dataset = wds.WebDataset(url)
+        dataset = wds.WebDataset(
+            "tmp" + str(client.tar_url).split("/")[-1].split(".")[0] + "_"+str(n_gpu)+".tar")
+        print("dataset loaded")
         captioning_results = {}
         start2 = time.time()
         for i, d in enumerate(dataset):
             print(i)
-            #print(d)
+            # print(d)
             start = time.time()
             try:
                 raw_image = Image.open(io.BytesIO(d['jpg'])).convert('RGB')
@@ -228,64 +242,98 @@ def c_h(n_gpu):
                 continue
 
             captioning_result = {}
-            captioning_result ["metadata_"+str(i)]= d['json'].decode('utf8', 'ignore') 
-            captioning_result ["winner_cap_"+str(i)]= winner_cap
-            captioning_result ["all_captions_"+str(i)]= all_captions
-            captioning_result ["all_similarties_"+str(i)]= all_sims
-
+            captioning_result["metadata_" +
+                              str(i)] = d['json'].decode('utf8', 'ignore')
+            captioning_result["winner_cap_"+str(i)] = winner_cap
+            captioning_result["all_captions_"+str(i)] = all_captions
+            captioning_result["all_similarties_"+str(i)] = all_sims
 
             captioning_results[str(i)] = captioning_result
-            #print((captioning_result))
+
             #print( d['json']  )
-            print(winner_cap)
+            print(f"[GPU{n_gpu:02d}] {winner_cap}")
 
-            print('Duration: ', time.time()-start)
-            print('Duration: ', time.time()-start2)
+            print(f'Duration: {time.time()-start:.2f}s')
+            print(f'Total duration: {time.time()-start2:.2f}s')
 
-            if i%500==0:
-            
-            
-               with open('./c_h/captioning_result_'+url.split("/")[-1].split(".")[0]+'.json', 'w') as fp:
-                  json.dump(captioning_results, fp)
+            if i > 0 and (i % 500 == 0 or i >= 9990):
 
-               for abc in range(100):
-                  resp = upload('./c_h/captioning_result_' +
-                          url.split("/")[-1].split(".")[0]+'.json')
-                  if resp == 5888:
-                     print('error while uploading')
-                  elif resp == 0:
-                     print('upload successful')
-                     break
-                  else:
-                     print('unknown upload error')
-                     time.sleep(5)
+                with open('./c_h/captioning_result_'+url.split("/")[-1].split(".")[0]+'.json', 'w') as fp:
+                    json.dump(captioning_results, fp)
+
+                for abc in range(100):
+                    resp = upload('./c_h/captioning_result_' +
+                                  url.split("/")[-1].split(".")[0]+'.json')
+                    if resp == 5888:
+                        print('error while uploading')
+                    elif resp == 0:
+                        print('upload successful')
+                        break
+                    else:
+                        print('unknown upload error')
+                        time.sleep(5)
 
         client.completeJob()  # - server is live so avoid actually calling this ;)
+        try:
+            os.remove("tmp" + str(client.tar_url).split("/")
+                      [-1].split(".")[0]+"_" + str(n_gpu)+".tar")
+            print("removed old tmp"+str(n_gpu)+".tar")
+        except:
+            pass
 
     client.bye()  # disconnects the worker from the machine - either there are no more jobs or the client has been flagged to be killed by the server (`client.shouldDie()`)
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--gpus', default=None, type=str,
+                        help='Comma separated list of gpus to use')
+    args = parser.parse_args()
+    return args
+
+
 def main():
-    #mp.set_start_method('spawn')
+    mp.set_start_method('spawn')
+    args = parse_args()
 
-    #n_gpus = 8
-    visible_gpus = [0, 1, 2, 3, 4, 5, 6, 7]
-    jobs = []
-    j = 0
+    num_gpus = torch.cuda.device_count()
+    if args.gpus is None:
+        visible_gpus = list(range(num_gpus))
+    else:
+        visible_gpus = []
+        parts = args.gpus.split(',')
+        for p in parts:
+            if '-' in p:
+                lo, hi = p.slipt('-')
+                lo, hi = int(lo), int(hi)
+                assert hi >= lo
+                visible_gpus.extend(list(range(lo, hi)))
+            else:
+                visible_gpus.append(int(p))
+
+    visible_gpus = list(set(visible_gpus))  # keep distinct
+    assert len(visible_gpus) > 0
+
+    print('Using GPUs: ', visible_gpus)
+
+    jobs = {}
+    for device_id in visible_gpus:
+        print(f'[GPU{device_id:02d}] Launching worker-process...')
+        p = mp.Process(target=c_h, kwargs=dict(n_gpu=device_id))
+        jobs[device_id] = p
+        p.start()
+
     while True:
-        print("starting new batch of 8 tars")
-        print('loop:', j)
-        j += 1
-        for i in visible_gpus:  # range(n_gpus):
-            print('launching worker-process:', i)
-            p = mp.Process(target=c_h, kwargs=dict(n_gpu=i))
-            jobs.append(p)
-            p.start()
-
-        for p in jobs:
-            p.join()
+        time.sleep(1)
+        for device_id,job in jobs.items():
+            if job.is_alive():
+                pass
+            else:
+                print(f'[GPU{device_id:02d}] Worker died, respawning...')
+                p = mp.Process(target=c_h, kwargs=dict(n_gpu=device_id))
+                job[id] = p
+                p.start()
 
 
 if __name__ == '__main__':
     main()
-
