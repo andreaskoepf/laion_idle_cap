@@ -223,22 +223,16 @@ def c_h(n_gpu, job_id):
         client.log("Processing...")
         # work on the data
 
-        try:
-            os.mkdir("./c_h/")
-        except:
-            pass
-
-        # dataset = wds.WebDataset("dataset.tar.gz")
         dataset = wds.WebDataset(local_tar_filename)
         print("dataset loaded")
         captioning_results = {}
 
         def upload_results():
-            with open(f'./c_h/captioning_result_{tar_basename}.json', 'w') as fp:
+            with open(f'captioning_result_{tar_basename}.json', 'w') as fp:
                 json.dump(captioning_results, fp)
 
             for retry in range(100):
-                resp = upload(f'./c_h/captioning_result_{tar_basename}.json')
+                resp = upload(f'captioning_result_{tar_basename}.json')
                 if resp == 5888:
                     print(f'[{job_id}] error while uploading')
                 elif resp == 0:
@@ -253,7 +247,6 @@ def c_h(n_gpu, job_id):
             start = time.time()
             try:
                 raw_image = Image.open(io.BytesIO(d['jpg'])).convert('RGB')
-                # raw_image.save("./c_h/Test"+str(i)+".jpg")
                 winner_cap, all_captions, all_sims = make_caption(raw_image)
             except:
                 continue
