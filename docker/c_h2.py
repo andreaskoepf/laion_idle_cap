@@ -194,25 +194,28 @@ def c_h(n_gpu, job_id):
         return synth_caption, captions, sims
 
     def upload(file):
-        result = os.system(f'zip "{file}.zip" "{file}" && rsync -av "{file}" deploy.laion.ai::spirit && rm "{file}.zip"')
+        result = os.system(
+            f'zip "{file}.zip" "{file}" && rsync -av "{file}" deploy.laion.ai::spirit && rm "{file}.zip"')
         return result
 
     while client.jobCount() > 0 and not client.shouldDie():
         client.newJob()
-        print(str(client.tar_url))
-        # str(client.tar_url).split("/")[-1] + " -"   #client.tar_url
-        url = "pipe:aws s3 cp " + str(client.tar_url) + " -"
-        print(url)
-        print("aws s3 cp " + str(client.tar_url) + " tmp" +
-              str(client.tar_url).split("/")[-1].split(".")[0] + "_"+str(n_gpu)+".tar")
+        tar_url = str(client.tar_url)
+        print(tar_url)
+
+        tar_filename = tar_url.split('/')[-1]
+        tar_basename = tar_filename.split('.')[0]
+        local_tar_filename = f'tmp{tar_basename}_{job_id}.tar'
+
+        aws_cp_cmd = f'aws s3 cp {tar_url} {local_tar_filename}'
+        print(aws_cp_cmd)
+
         try:
-            os.system("aws s3 cp " + str(client.tar_url) + " tmp" +
-                      str(client.tar_url).split("/")[-1].split(".")[0] + "_"+str(n_gpu)+".tar")
+            os.system(aws_cp_cmd)
         except:
             time.sleep(5)
             try:
-                os.system("aws s3 cp " + str(client.tar_url) + " tmp" +
-                          str(client.tar_url).split("/")[-1].split(".")[0] + "_"+str(n_gpu)+".tar")
+                os.system(aws_cp_cmd)
             except:
                 continue
 
@@ -227,18 +230,16 @@ def c_h(n_gpu, job_id):
             pass
 
         # dataset = wds.WebDataset("dataset.tar.gz")
-        dataset = wds.WebDataset(
-            "tmp" + str(client.tar_url).split("/")[-1].split(".")[0] + "_"+str(n_gpu)+".tar")
+        dataset = wds.WebDataset(local_tar_filename)
         print("dataset loaded")
         captioning_results = {}
 
         def upload_results():
-            with open('./c_h/captioning_result_'+url.split("/")[-1].split(".")[0]+'.json', 'w') as fp:
+            with open(f'./c_h/captioning_result_{tar_basename}.json', 'w') as fp:
                 json.dump(captioning_results, fp)
 
             for retry in range(100):
-                resp = upload('./c_h/captioning_result_' +
-                              url.split("/")[-1].split(".")[0]+'.json')
+                resp = upload(f'./c_h/captioning_result_{tar_basename}.json')
                 if resp == 5888:
                     print(f'[{job_id}] error while uploading')
                 elif resp == 0:
@@ -250,8 +251,6 @@ def c_h(n_gpu, job_id):
 
         start2 = time.time()
         for i, d in enumerate(dataset):
-            # print(i)
-            # print(d)
             start = time.time()
             try:
                 raw_image = Image.open(io.BytesIO(d['jpg'])).convert('RGB')
@@ -279,9 +278,8 @@ def c_h(n_gpu, job_id):
         upload_results()  # final upload
         client.completeJob()  # - server is live so avoid actually calling this ;)
         try:
-            os.remove("tmp" + str(client.tar_url).split("/")
-                      [-1].split(".")[0]+"_" + str(n_gpu)+".tar")
-            print("removed old tmp"+str(n_gpu)+".tar")
+            os.remove(local_tar_filename)
+            print(f"removed old tmp file: {local_tar_filename}")
         except:
             pass
 
@@ -326,7 +324,7 @@ def main():
     jobs = {}
     for device_id in visible_gpus:
         for i in range(num_workers):
-            job_id = f'GPU{device_id:02d}.{i}'
+            job_id = f'GPU{device_id:02d}-{i}'
             print(f'[{job_id}] Launching worker-process...')
             p = mp.Process(target=c_h, kwargs=dict(
                 n_gpu=device_id, job_id=job_id))

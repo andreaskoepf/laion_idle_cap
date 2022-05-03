@@ -28,11 +28,11 @@ RUN git clone -b main https://github.com/LAION-AI/BLIP.git && python3 -m pip --n
 
 # crawlingathome
 RUN git clone -b caption-gen https://github.com/LAION-AI/crawlingathome.git
-
 RUN python3 -m pip --no-cache-dir install webdataset simplet5 awscli pynvml
 
-# copy python scripts
-COPY *.py ./
-
-# load models into torch hub cache
+# copy prefetch script & load models into torch hub cache
+COPY sampling.py prefetch_models.py ./
 RUN python3 prefetch_models.py && rm prefetch_models.py
+
+# copy captioning script
+COPY c_h2.py ./
