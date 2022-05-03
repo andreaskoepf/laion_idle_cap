@@ -10,7 +10,7 @@ WORKDIR /tmp
 COPY cuda-keyring_1.0-1_all.deb ./
 RUN rm /etc/apt/sources.list.d/cuda.list && apt-key del 7fa2af80 && dpkg -i cuda-keyring_1.0-1_all.deb
 
-RUN apt-get update && apt-get install rsync git curl wget unzip vim nano less htop build-essential autotools-dev cmake g++ gcc ca-certificates ssh python3-dev libpython3-dev python3-pip -y
+RUN apt-get update && apt-get install rsync git curl wget zip unzip vim nano less htop build-essential autotools-dev cmake g++ gcc ca-certificates ssh python3-dev libpython3-dev python3-pip -y
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1 && pip install --upgrade pip
 
 # install PyTorch 1.11.0

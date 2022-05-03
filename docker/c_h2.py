@@ -194,7 +194,7 @@ def c_h(n_gpu, job_id):
         return synth_caption, captions, sims
 
     def upload(file):
-        result = os.system(f"rsync -av {file} deploy.laion.ai::spirit ")
+        result = os.system(f'zip "{file}.zip" "{file}" && rsync -av "{file}" deploy.laion.ai::spirit && rm "{file}.zip"')
         return result
 
     while client.jobCount() > 0 and not client.shouldDie():
@@ -232,7 +232,7 @@ def c_h(n_gpu, job_id):
         print("dataset loaded")
         captioning_results = {}
 
-        def upload_resutls():
+        def upload_results():
             with open('./c_h/captioning_result_'+url.split("/")[-1].split(".")[0]+'.json', 'w') as fp:
                 json.dump(captioning_results, fp)
 
@@ -274,9 +274,9 @@ def c_h(n_gpu, job_id):
                 f"[{job_id}:{i:05d}; total: {time.time()-start2:.2f}s; {time.time()-start:.2f}s] {winner_cap}")
 
             if i > 0 and i % 500 == 0:
-                upload_resutls()
+                upload_results()
 
-        upload_resutls()  # final upload
+        upload_results()  # final upload
         client.completeJob()  # - server is live so avoid actually calling this ;)
         try:
             os.remove("tmp" + str(client.tar_url).split("/")
