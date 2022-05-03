@@ -35,7 +35,6 @@ def c_h(n_gpu, job_id):
 	os.system("unzip simplet5-epoch-2-train-loss-0.2212-val-loss-0.2188.zip")
 	'''
 
-    import torch
     import torch.nn.functional as F
     from torchvision import transforms
     from torchvision.transforms.functional import InterpolationMode
@@ -195,7 +194,7 @@ def c_h(n_gpu, job_id):
 
     def upload(file):
         result = os.system(
-            f'zip "{file}.zip" "{file}" && rsync -av "{file}" deploy.laion.ai::spirit && rm "{file}.zip"')
+            f'zip "{file}.zip" "{file}" && rsync -av "{file}.zip" deploy.laion.ai::spirit && rm "{file}.zip"')
         return result
 
     while client.jobCount() > 0 and not client.shouldDie():
