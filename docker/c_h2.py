@@ -281,7 +281,7 @@ def c_h(n_gpu, job_id):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpus', default=None, type=str,
-                        help='Comma separated list of gpus to use')
+                        help='Comma separated list of GPUs to use')
     parser.add_argument('--workers', default=1, type=int,
                         help='Number of workers spawned per GPU (default 1)')
     args = parser.parse_args()
