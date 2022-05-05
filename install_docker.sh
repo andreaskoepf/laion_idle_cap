@@ -10,6 +10,17 @@ distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
             sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 sudo apt-get update
 sudo apt-get install -y nvidia-docker2
+sudo groupadd docker
+
+# optionally add user to docker group
+read -p "Add user '$USER' to 'docker' group? [Y/n]" -n 1 -r yn
+echo # newline
+case $yn in
+    [Nn]* ) ;;
+    * ) sudo usermod -aG docker $USER;;
+esac
+
+# rastart the docker daemon
 sudo systemctl restart docker
 
 # test nvidia-smi in docker container

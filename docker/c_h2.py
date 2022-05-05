@@ -72,7 +72,6 @@ def c_h(n_gpu, job_id):
 
     seed = 1257
     torch.manual_seed(seed)
-
     random.seed(seed)
 
     if torch.cuda.is_available():
@@ -83,8 +82,7 @@ def c_h(n_gpu, job_id):
         torch.device('cpu')
         device0 = torch.device('cpu')
         device1 = torch.device('cpu')
-    #print("device0" )
-    print(device0)
+    print('f[{job_id}] Using device: {device0}')
     if mode == 'CLIP-ViT-L+RN50x64':
         clip_model_name1 = "ViT-L/14"
         clip_model_name2 = "RN50x64"
@@ -116,11 +114,9 @@ def c_h(n_gpu, job_id):
 
     model_T5 = SimpleT5()
     if torch.cuda.is_available():
-        # outtest/simplet5-epoch-2-train-loss-0.1273-val-loss-0.1379", use_gpu=False) #repair1/simplet5-epoch-1-train-loss-0.2125-val-loss-0.2048", use_gpu=True)
         model_T5.load_model(
             "t5", "./simplet5-epoch-2-train-loss-0.2212-val-loss-0.2188", use_gpu=True)
     else:
-        # outtest/simplet5-epoch-2-train-loss-0.1273-val-loss-0.1379", use_gpu=False) #repair1/simplet5-epoch-1-train-loss-0.2125-val-loss-0.2048", use_gpu=True)
         model_T5.load_model(
             "t5", "./simplet5-epoch-2-train-loss-0.2212-val-loss-0.2188", use_gpu=False)
 
@@ -185,17 +181,13 @@ def c_h(n_gpu, job_id):
             winner_sims.append(sims[best_index])
             synth_caption = captions[best_index]
 
-        #all_sims = all_sims + sims
-
-        #print('synth: ', synth_caption)
         synth_caption = model_T5.predict(synth_caption)[0]  # synth_caption
 
         return synth_caption, captions, sims
 
     def upload(file):
-        result = os.system(
+        return os.system(
             f'zip "{file}.zip" "{file}" && rsync -av "{file}.zip" deploy.laion.ai::spirit && rm "{file}.zip"')
-        return result
 
     while client.jobCount() > 0 and not client.shouldDie():
         client.newJob()
@@ -204,7 +196,7 @@ def c_h(n_gpu, job_id):
 
         tar_filename = tar_url.split('/')[-1]
         tar_basename = tar_filename.split('.')[0]
-        local_tar_filename = f'tmp{tar_basename}_{job_id}.tar'
+        local_tar_filename = f'tmp{job_id}_{tar_basename}.tar'
 
         aws_cp_cmd = f'aws s3 cp {tar_url} {local_tar_filename}'
         print(aws_cp_cmd)
@@ -224,11 +216,12 @@ def c_h(n_gpu, job_id):
         # work on the data
 
         dataset = wds.WebDataset(local_tar_filename)
-        print("dataset loaded")
+        print(f'Dataset loaded: {local_tar_filename}')
         captioning_results = {}
 
         def upload_results():
-            with open(f'captioning_result_{tar_basename}.json', 'w') as fp:
+            result_json_filename = f'captioning_result_{tar_basename}.json'
+            with open(result_json_filename, 'w') as fp:
                 json.dump(captioning_results, fp)
 
             for retry in range(100):
@@ -241,6 +234,15 @@ def c_h(n_gpu, job_id):
                 else:
                     print(f'[{job_id}] unknown upload error: {resp}')
                     time.sleep(5)
+
+            try:
+                print(f'Removing file {result_json_filename} ...', end='')
+                os.remove(result_json_filename)
+                print('done.')
+            except BaseException as err:
+                print('failed.')
+                print(f"WARNING: Ignoring unexpected {err=}, {type(err)=}")
+                pass
 
         start2 = time.time()
         for i, d in enumerate(dataset):
@@ -270,9 +272,12 @@ def c_h(n_gpu, job_id):
         upload_results()  # final upload
         client.completeJob()  # - server is live so avoid actually calling this ;)
         try:
+            print(f'Removing tmp file {local_tar_filename} ...', end='')
             os.remove(local_tar_filename)
-            print(f"removed old tmp file: {local_tar_filename}")
-        except:
+            print('done.')
+        except BaseException as err:
+            print('failed.')
+            print(f"WARNING: Ignoring unexpected {err=}, {type(err)=}")
             pass
 
     client.bye()  # disconnects the worker from the machine - either there are no more jobs or the client has been flagged to be killed by the server (`client.shouldDie()`)
@@ -330,7 +335,10 @@ def main():
                 if job.is_alive():
                     pass
                 else:
-                    print(f'[{job_id}] Worker died, respawning...')
+                    print(f'[{job_id}] Worker died, cleaning up...')
+                    # remove remaining tar file
+                    os.system(f'rm -f -v tmp{job_id}_*.tar')
+                    print(f'[{job_id}] respawning...')
                     p = mp.Process(target=c_h, kwargs=dict(
                         n_gpu=device_id, job_id=job_id))
                     jobs[job_id] = (p, device_id)
