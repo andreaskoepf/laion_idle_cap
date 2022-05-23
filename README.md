@@ -18,6 +18,8 @@ Installing and running the captioning script on a fresh machine:
 5. Run `./start.sh --gpus 0-7 --workers 2` to start the captioning script (detached) in a new docker container. If the `--gpus` option is omitted all available GPUs are used. To select specific devices use comma separated device indices or indice-ranges (e.g. `1-3` or `0,2,4`). The `--workers` option allows to launch more then one worker per GPU (recommended is 2 for full GPU utilization, default is 1).
 6. Optionally run `./attach.sh` to attach your terminal to the running instance of the captioning script and see its output.
 
+**Note**: Some of the scripts (e.g. `start.sh` and `stop.sh`) fail when they are launched by a user who is is not member of the docker group (e.g. you might see an error like 'permission denied to connect to the docker deamon socket'). In this case please use `sudo` to run them as superuser.
+
 ## Stopping the Docker Container
 - run `./stop.sh` or `docker stop laion_cah`
 
